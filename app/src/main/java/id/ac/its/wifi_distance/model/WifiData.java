@@ -3,15 +3,18 @@ package id.ac.its.wifi_distance.model;
 import android.net.wifi.ScanResult;
 
 import java.util.Collections;
-import java.util.Deque;
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.Locale;
 
 public class WifiData {
+    private static int MAX_DBM_LIST = 10;
+    private static Comparator<Integer> ABS_COMPARATOR = Comparator.comparingInt(Math::abs);
+
     private String BSSID;
     private String SSID;
     private int frequency;
-    private Deque<Integer> dbmList = new LinkedList<>();
+    private LinkedList<Integer> dbmList = new LinkedList<>();
 
     private WifiData() {
     }
@@ -25,27 +28,18 @@ public class WifiData {
         return data;
     }
 
-    public void updateDbm(ScanResult result) {
-        dbmList.addLast(result.level);
-    }
-
-    public String getBSSID() {
-        return BSSID;
-    }
-
-    public String getSSID() {
-        return SSID;
-    }
-
-    public int getFrequency() {
-        return frequency;
+    public synchronized void updateDbm(ScanResult result) {
+        dbmList.addFirst(result.level);
+        if (dbmList.size() > MAX_DBM_LIST) {
+            dbmList.removeLast();
+        }
     }
 
     public String getSummary() {
         return String.format(
                 Locale.getDefault(),
-                "SSID: %s\nFrequency: %d MHz\nLevel: %d dBm\nDistance: %.2f m\n\n",
-                SSID, frequency, getStrongestDbm(), getDistance()
+                "SSID: %s\nFrequency: %d\nLevels: %s\nDistance: %.2f m\n\n",
+                SSID, frequency, dbmList.toString(), getDistance()
         );
     }
 
@@ -58,8 +52,8 @@ public class WifiData {
     private int getStrongestDbm() {
         int min = Collections.min(dbmList);
         int max = Collections.max(dbmList);
-        int absMin = Math.abs(min);
-        int absMax = Math.abs(max);
-        return (absMin < absMax) ? min : max;
+        int compareMinMax = ABS_COMPARATOR.compare(min, max);
+        boolean isMinLessThanMax = compareMinMax < 0;
+        return isMinLessThanMax ? min : max;
     }
 }

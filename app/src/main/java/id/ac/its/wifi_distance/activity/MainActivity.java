@@ -83,7 +83,7 @@ public class MainActivity extends OnPermissionsGrantedCallback {
         executor.scheduleAtFixedRate(
                 this::initWifiScan,
                 0,
-                3,
+                1,
                 TimeUnit.SECONDS
         );
     }
