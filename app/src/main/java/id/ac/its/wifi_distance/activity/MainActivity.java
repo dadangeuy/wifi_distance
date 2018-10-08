@@ -8,8 +8,9 @@ import android.content.IntentFilter;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.TextView;
+import android.widget.ListView;
 
 import java.util.List;
 import java.util.Map;
@@ -29,12 +30,11 @@ public class MainActivity extends OnPermissionsGrantedCallback {
     private final IntentFilter wifiScanFilter = new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
     private final Map<String, WifiData> wifiDataMap = new ConcurrentHashMap<>();
 
-    // WIFI Component
+    // Service Component
     private WifiManager wifiManager;
 
     // UI Component
-    private Button resetButton;
-    private TextView outputView;
+    private ArrayAdapter<String> wifiList;
 
     public MainActivity() {
         wifiScanReceiver = new BroadcastReceiver() {
@@ -61,13 +61,19 @@ public class MainActivity extends OnPermissionsGrantedCallback {
     private void initUiComponent() {
         setContentView(R.layout.activity_main);
 
-        resetButton = findViewById(R.id.ResetButton);
-        outputView = findViewById(R.id.OutputView);
-
+        Button resetButton = findViewById(R.id.ResetButton);
         resetButton.setOnClickListener(v -> {
             wifiDataMap.clear();
-            outputView.setText("empty");
+            wifiList.clear();
         });
+
+        ListView wifiListView = findViewById(R.id.WifiListView);
+        wifiList = new ArrayAdapter<>(
+                this,
+                R.layout.layout_wifi_row,
+                R.id.SSID
+        );
+        wifiListView.setAdapter(wifiList);
     }
 
     private void initServiceComponent() {
@@ -116,12 +122,10 @@ public class MainActivity extends OnPermissionsGrantedCallback {
     }
 
     private void printWifiDataSummary() {
-        StringBuilder outputBuilder = new StringBuilder();
+        wifiList.clear();
         wifiDataMap.forEach((BSSID, wifiData) -> {
             String summary = wifiData.getSummary();
-            outputBuilder.append(summary);
+            wifiList.add(summary);
         });
-        String output = outputBuilder.toString().trim();
-        outputView.setText(output);
     }
 }
