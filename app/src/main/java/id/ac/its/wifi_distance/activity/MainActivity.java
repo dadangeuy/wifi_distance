@@ -1,4 +1,4 @@
-package id.ac.its.wifi_distance;
+package id.ac.its.wifi_distance.activity;
 
 import android.Manifest.permission;
 import android.content.BroadcastReceiver;
@@ -14,6 +14,9 @@ import android.widget.TextView;
 
 import java.util.List;
 import java.util.Locale;
+
+import id.ac.its.wifi_distance.activity.callback.OnPermissionsGrantedCallback;
+import id.ac.its.wifi_distance.R;
 
 public class MainActivity extends OnPermissionsGrantedCallback {
     private Button refreshButton;

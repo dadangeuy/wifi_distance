@@ -1,4 +1,4 @@
-package id.ac.its.wifi_distance;
+package id.ac.its.wifi_distance.activity.callback;
 
 import android.app.Activity;
 import android.content.pm.PackageManager;
