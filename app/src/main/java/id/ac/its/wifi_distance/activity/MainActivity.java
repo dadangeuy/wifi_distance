@@ -8,7 +8,6 @@ import android.content.IntentFilter;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
-import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
@@ -25,7 +24,7 @@ import id.ac.its.wifi_distance.activity.callback.OnPermissionsGrantedCallback;
 import id.ac.its.wifi_distance.model.WifiData;
 
 public class MainActivity extends OnPermissionsGrantedCallback {
-    private Button refreshButton;
+    private Button resetButton;
     private TextView outputView;
     private WifiManager wifiManager;
     private Map<String, WifiData> wifiDataMap = new ConcurrentHashMap<>();
@@ -35,10 +34,12 @@ public class MainActivity extends OnPermissionsGrantedCallback {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        refreshButton = findViewById(R.id.RefreshButton);
+        resetButton = findViewById(R.id.ResetButton);
         outputView = findViewById(R.id.OutputView);
+
         wifiManager = getSystemService(WifiManager.class);
         executor = Executors.newSingleThreadScheduledExecutor();
+
         onRequestPermissions(
                 permission.ACCESS_WIFI_STATE,
                 permission.CHANGE_WIFI_STATE,
@@ -48,8 +49,7 @@ public class MainActivity extends OnPermissionsGrantedCallback {
 
     @Override
     public void onPermissionsGranted() {
-        refreshButton.setVisibility(View.VISIBLE);
-        refreshButton.setOnClickListener(v -> wifiDataMap.clear());
+        resetButton.setOnClickListener(v -> wifiDataMap.clear());
         initPeriodicWifiScan();
     }
 
