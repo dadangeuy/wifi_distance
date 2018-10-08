@@ -24,11 +24,26 @@ import id.ac.its.wifi_distance.activity.callback.OnPermissionsGrantedCallback;
 import id.ac.its.wifi_distance.model.WifiData;
 
 public class MainActivity extends OnPermissionsGrantedCallback {
+    private ScheduledExecutorService executor;
+    private BroadcastReceiver wifiScanReceiver;
+    private IntentFilter wifiScanFilter = new IntentFilter();
+
     private Button resetButton;
     private TextView outputView;
     private WifiManager wifiManager;
     private Map<String, WifiData> wifiDataMap = new ConcurrentHashMap<>();
-    private ScheduledExecutorService executor;
+
+    public MainActivity() {
+        executor = Executors.newSingleThreadScheduledExecutor();
+        wifiScanReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String summary = getWifiDataSummary();
+                outputView.setText(summary);
+            }
+        };
+        wifiScanFilter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,7 +53,6 @@ public class MainActivity extends OnPermissionsGrantedCallback {
         outputView = findViewById(R.id.OutputView);
 
         wifiManager = getSystemService(WifiManager.class);
-        executor = Executors.newSingleThreadScheduledExecutor();
 
         onRequestPermissions(
                 permission.ACCESS_WIFI_STATE,
@@ -49,26 +63,19 @@ public class MainActivity extends OnPermissionsGrantedCallback {
 
     @Override
     public void onPermissionsGranted() {
-        resetButton.setOnClickListener(v -> wifiDataMap.clear());
+        resetButton.setOnClickListener(v -> {
+            wifiDataMap.clear();
+            outputView.setText("empty");
+        });
         initPeriodicWifiScan();
     }
 
     private void initPeriodicWifiScan() {
-        executor.scheduleAtFixedRate(this::initWifiScan, 0, 5, TimeUnit.SECONDS);
+        executor.scheduleAtFixedRate(this::initWifiScan, 0, 2, TimeUnit.SECONDS);
     }
 
     private void initWifiScan() {
-        BroadcastReceiver receiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                outputView.setText(getWifiDataSummary());
-            }
-        };
-
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
-        registerReceiver(receiver, filter);
-
+        registerReceiver(wifiScanReceiver, wifiScanFilter);
         wifiManager.startScan();
     }
 
@@ -92,17 +99,25 @@ public class MainActivity extends OnPermissionsGrantedCallback {
         } else {
             StringBuilder outputBuilder = new StringBuilder();
             wifiDataMap.forEach((key, value) -> {
+                int frequency = value.getFrequency();
+                double averageDbm = value.getAverageDbm();
+                double distance = dbmToMeter(frequency, averageDbm);
                 String summary = String.format(
                         Locale.getDefault(),
                         "SSID: %s\nFrequency: %d\nLevel: %.2f dBm\nDistance: %.2f m\n\n",
                         value.getSSID(),
-                        value.getFrequency(),
-                        value.getAverageDbm(),
-                        value.getAverageDistance()
+                        frequency,
+                        averageDbm,
+                        distance
                 );
                 outputBuilder.append(summary);
             });
             return outputBuilder.toString().trim();
         }
+    }
+
+    private Double dbmToMeter(int frequency, double dBm) {
+        double exp = (27.55 - (20.0 * Math.log10(frequency)) + Math.abs(dBm)) / 20.0;
+        return Math.pow(10.0, exp);
     }
 }
