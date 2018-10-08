@@ -2,6 +2,7 @@ package id.ac.its.wifi_distance.model;
 
 import android.net.wifi.ScanResult;
 
+import java.util.Collections;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.Locale;
@@ -43,28 +44,22 @@ public class WifiData {
     public String getSummary() {
         return String.format(
                 Locale.getDefault(),
-                "SSID: %s\nFrequency: %d MHz\nAvg. Level: %.2f dBm\nDistance: %.2f m\n\n",
-                SSID, frequency, getAverageDbm(), getDistance()
+                "SSID: %s\nFrequency: %d MHz\nLevel: %d dBm\nDistance: %.2f m\n\n",
+                SSID, frequency, getStrongestDbm(), getDistance()
         );
     }
 
-    public double getAverageDbm() {
-        if (dbmList.isEmpty()) {
-            return Double.NaN;
-        } else {
-            int sum = 0;
-            int count = 0;
-            for (int dBm : dbmList) {
-                sum += dBm;
-                ++count;
-            }
-            return (double) sum / count;
-        }
+    private Double getDistance() {
+        double dBm = getStrongestDbm();
+        double exp = (27.55 - (20.0 * Math.log10(frequency)) + Math.abs(dBm)) / 20.0;
+        return Math.pow(10.0, exp);
     }
 
-    private Double getDistance() {
-        double averageDbm = getAverageDbm();
-        double exp = (27.55 - (20.0 * Math.log10(frequency)) + Math.abs(averageDbm)) / 20.0;
-        return Math.pow(10.0, exp);
+    private int getStrongestDbm() {
+        int min = Collections.min(dbmList);
+        int max = Collections.max(dbmList);
+        int absMin = Math.abs(min);
+        int absMax = Math.abs(max);
+        return (absMin < absMax) ? min : max;
     }
 }
