@@ -12,7 +12,6 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -24,35 +23,33 @@ import id.ac.its.wifi_distance.activity.callback.OnPermissionsGrantedCallback;
 import id.ac.its.wifi_distance.model.WifiData;
 
 public class MainActivity extends OnPermissionsGrantedCallback {
-    private ScheduledExecutorService executor;
-    private BroadcastReceiver wifiScanReceiver;
-    private IntentFilter wifiScanFilter = new IntentFilter();
+    // Non-Android Component
+    private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+    private final BroadcastReceiver wifiScanReceiver;
+    private final IntentFilter wifiScanFilter = new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
+    private final Map<String, WifiData> wifiDataMap = new ConcurrentHashMap<>();
 
+    // WIFI Component
+    private WifiManager wifiManager;
+
+    // UI Component
     private Button resetButton;
     private TextView outputView;
-    private WifiManager wifiManager;
-    private Map<String, WifiData> wifiDataMap = new ConcurrentHashMap<>();
 
     public MainActivity() {
-        executor = Executors.newSingleThreadScheduledExecutor();
         wifiScanReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                String summary = getWifiDataSummary();
-                outputView.setText(summary);
+                processWifiScanResults();
             }
         };
-        wifiScanFilter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        resetButton = findViewById(R.id.ResetButton);
-        outputView = findViewById(R.id.OutputView);
-
-        wifiManager = getSystemService(WifiManager.class);
+        initUiComponent();
+        initServiceComponent();
 
         onRequestPermissions(
                 permission.ACCESS_WIFI_STATE,
@@ -61,17 +58,34 @@ public class MainActivity extends OnPermissionsGrantedCallback {
         );
     }
 
-    @Override
-    public void onPermissionsGranted() {
+    private void initUiComponent() {
+        setContentView(R.layout.activity_main);
+
+        resetButton = findViewById(R.id.ResetButton);
+        outputView = findViewById(R.id.OutputView);
+
         resetButton.setOnClickListener(v -> {
             wifiDataMap.clear();
             outputView.setText("empty");
         });
+    }
+
+    private void initServiceComponent() {
+        wifiManager = getSystemService(WifiManager.class);
+    }
+
+    @Override
+    public void onPermissionsGranted() {
         initPeriodicWifiScan();
     }
 
     private void initPeriodicWifiScan() {
-        executor.scheduleAtFixedRate(this::initWifiScan, 0, 2, TimeUnit.SECONDS);
+        executor.scheduleAtFixedRate(
+                this::initWifiScan,
+                0,
+                3,
+                TimeUnit.SECONDS
+        );
     }
 
     private void initWifiScan() {
@@ -79,45 +93,35 @@ public class MainActivity extends OnPermissionsGrantedCallback {
         wifiManager.startScan();
     }
 
-    private String getWifiDataSummary() {
+    private void processWifiScanResults() {
         List<ScanResult> scanResults = wifiManager.getScanResults();
-
-        for (ScanResult result : scanResults) {
-            boolean dataExist = wifiDataMap.containsKey(result.BSSID);
-            WifiData data;
-            if (dataExist) {
-                data = wifiDataMap.get(result.BSSID);
-                data.updateDbm(result);
-            } else {
-                data = WifiData.from(result);
-                wifiDataMap.put(result.BSSID, data);
-            }
-        }
-
-        if (wifiDataMap.isEmpty()) {
-            return "empty";
-        } else {
-            StringBuilder outputBuilder = new StringBuilder();
-            wifiDataMap.forEach((key, value) -> {
-                int frequency = value.getFrequency();
-                double averageDbm = value.getAverageDbm();
-                double distance = dbmToMeter(frequency, averageDbm);
-                String summary = String.format(
-                        Locale.getDefault(),
-                        "SSID: %s\nFrequency: %d\nLevel: %.2f dBm\nDistance: %.2f m\n\n",
-                        value.getSSID(),
-                        frequency,
-                        averageDbm,
-                        distance
-                );
-                outputBuilder.append(summary);
-            });
-            return outputBuilder.toString().trim();
-        }
+        updateWifiDataMap(scanResults);
+        printWifiDataSummary();
     }
 
-    private Double dbmToMeter(int frequency, double dBm) {
-        double exp = (27.55 - (20.0 * Math.log10(frequency)) + Math.abs(dBm)) / 20.0;
-        return Math.pow(10.0, exp);
+    private void updateWifiDataMap(List<ScanResult> scanResults) {
+        scanResults.forEach(result -> {
+            boolean dataExist = wifiDataMap.containsKey(result.BSSID);
+            if (dataExist) {
+                wifiDataMap
+                        .get(result.BSSID)
+                        .updateDbm(result);
+            } else {
+                wifiDataMap.put(
+                        result.BSSID,
+                        WifiData.from(result)
+                );
+            }
+        });
+    }
+
+    private void printWifiDataSummary() {
+        StringBuilder outputBuilder = new StringBuilder();
+        wifiDataMap.forEach((BSSID, wifiData) -> {
+            String summary = wifiData.getSummary();
+            outputBuilder.append(summary);
+        });
+        String output = outputBuilder.toString().trim();
+        outputView.setText(output);
     }
 }
