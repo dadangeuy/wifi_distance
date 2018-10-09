@@ -121,7 +121,7 @@ public class MainActivity extends OnPermissionsGrantedCallback {
         }
     }
 
-    private void showWifiDataSummary() {
+    private synchronized void showWifiDataSummary() {
         wifiDataList.clear();
         wifiDataList.addAll(wifiDataMap.values());
         wifiDataAdapter.notifyDataSetChanged();
