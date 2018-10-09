@@ -38,8 +38,8 @@ public class WifiData {
     public String getSummary() {
         return String.format(
                 Locale.getDefault(),
-                "SSID: %s\nFrequency: %d\nLevels: %s\nDistance: %.2f m",
-                SSID, frequency, dbmList.toString(), getDistance()
+                "BSSID: %s\nSSID: %s\nFrequency: %d\nLevels: %s\nDistance: %.2f m",
+                BSSID, SSID, frequency, dbmList.toString(), getDistance()
         );
     }
 
