@@ -8,10 +8,12 @@ import android.content.IntentFilter;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
-import android.widget.ArrayAdapter;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
+import android.view.View;
 import android.widget.Button;
-import android.widget.ListView;
 
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 import id.ac.its.wifi_distance.R;
 import id.ac.its.wifi_distance.activity.callback.OnPermissionsGrantedCallback;
 import id.ac.its.wifi_distance.model.WifiData;
+import id.ac.its.wifi_distance.model.WifiDataAdapter;
 
 public class MainActivity extends OnPermissionsGrantedCallback {
     // Non-Android Component
@@ -29,12 +32,13 @@ public class MainActivity extends OnPermissionsGrantedCallback {
     private final BroadcastReceiver wifiScanReceiver;
     private final IntentFilter wifiScanFilter = new IntentFilter(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION);
     private final Map<String, WifiData> wifiDataMap = new ConcurrentHashMap<>();
+    private final List<WifiData> wifiDataList = new LinkedList<>();
 
     // Service Component
     private WifiManager wifiManager;
 
     // UI Component
-    private ArrayAdapter<String> wifiList;
+    private WifiDataAdapter wifiDataAdapter;
 
     public MainActivity() {
         wifiScanReceiver = new BroadcastReceiver() {
@@ -62,18 +66,12 @@ public class MainActivity extends OnPermissionsGrantedCallback {
         setContentView(R.layout.activity_main);
 
         Button resetButton = findViewById(R.id.ResetButton);
-        resetButton.setOnClickListener(v -> {
-            wifiDataMap.clear();
-            wifiList.clear();
-        });
+        resetButton.setOnClickListener(this::onClickReset);
 
-        ListView wifiListView = findViewById(R.id.WifiListView);
-        wifiList = new ArrayAdapter<>(
-                this,
-                R.layout.layout_wifi_row,
-                R.id.SSID
-        );
-        wifiListView.setAdapter(wifiList);
+        RecyclerView wifiRecyclerView = findViewById(R.id.WifiRecyclerView);
+        wifiDataAdapter = new WifiDataAdapter(wifiDataList);
+        wifiRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        wifiRecyclerView.setAdapter(wifiDataAdapter);
     }
 
     private void initServiceComponent() {
@@ -102,30 +100,36 @@ public class MainActivity extends OnPermissionsGrantedCallback {
     private void processWifiScanResults() {
         List<ScanResult> scanResults = wifiManager.getScanResults();
         updateWifiDataMap(scanResults);
-        printWifiDataSummary();
+        showWifiDataSummary();
     }
 
     private void updateWifiDataMap(List<ScanResult> scanResults) {
-        scanResults.forEach(result -> {
-            boolean dataExist = wifiDataMap.containsKey(result.BSSID);
-            if (dataExist) {
-                wifiDataMap
-                        .get(result.BSSID)
-                        .updateDbm(result);
-            } else {
-                wifiDataMap.put(
-                        result.BSSID,
-                        WifiData.from(result)
-                );
-            }
-        });
+        scanResults.forEach(this::updateWifiDataMap);
     }
 
-    private void printWifiDataSummary() {
-        wifiList.clear();
-        wifiDataMap.forEach((BSSID, wifiData) -> {
-            String summary = wifiData.getSummary();
-            wifiList.add(summary);
-        });
+    private void updateWifiDataMap(ScanResult result) {
+        boolean dataExist = wifiDataMap.containsKey(result.BSSID);
+        if (dataExist) {
+            wifiDataMap
+                    .get(result.BSSID)
+                    .addDbm(result);
+        } else {
+            wifiDataMap.put(
+                    result.BSSID,
+                    WifiData.from(result)
+            );
+        }
+    }
+
+    private void showWifiDataSummary() {
+        wifiDataList.clear();
+        wifiDataList.addAll(wifiDataMap.values());
+        wifiDataAdapter.notifyDataSetChanged();
+    }
+
+    private void onClickReset(View view) {
+        wifiDataMap.clear();
+        wifiDataList.clear();
+        wifiDataAdapter.notifyDataSetChanged();
     }
 }

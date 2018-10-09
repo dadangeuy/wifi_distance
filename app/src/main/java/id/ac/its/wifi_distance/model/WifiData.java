@@ -28,7 +28,7 @@ public class WifiData {
         return data;
     }
 
-    public synchronized void updateDbm(ScanResult result) {
+    public synchronized void addDbm(ScanResult result) {
         dbmList.addFirst(result.level);
         if (dbmList.size() > MAX_DBM_LIST) {
             dbmList.removeLast();
