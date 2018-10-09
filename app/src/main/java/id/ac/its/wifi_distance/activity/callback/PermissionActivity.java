@@ -6,19 +6,48 @@ import android.support.annotation.NonNull;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 public abstract class PermissionActivity extends Activity {
     private final OnPermissionGrantedCallback callback;
-    private final int REQUEST_CODE = new Random().nextInt();
+    private final int REQUEST_CODE = 14045;
+    private final String[] permissions;
 
-    public PermissionActivity() {
-        callback = OnPermissionGrantedCallback.class.cast(this);
+    public PermissionActivity(String... permissions) {
+        this.callback = OnPermissionGrantedCallback.class.cast(this);
+        this.permissions = permissions;
     }
 
-    protected void requestPermissionsAsync(String... permissions) {
+    @Override
+    protected void onStart() {
+        super.onStart();
         List<String> deniedPermissions = getDeniedPermissions(permissions);
         resolveDeniedPermissions(deniedPermissions);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        if (requestCode == REQUEST_CODE) {
+            List<String> deniedPermissions = getDeniedPermissions(permissions, grantResults);
+            resolveDeniedPermissions(deniedPermissions);
+        }
+    }
+
+    private void resolveDeniedPermissions(List<String> deniedPermissions) {
+        boolean isPermissionSafe = (deniedPermissions.isEmpty());
+        if (isPermissionSafe) {
+            callback.onPermissionGranted();
+        } else {
+            requestPermissionsAsync(deniedPermissions);
+        }
+    }
+
+    private void requestPermissionsAsync(List<String> permissions) {
+        if (!permissions.isEmpty()) {
+            requestPermissions(
+                    permissions.toArray(new String[permissions.size()]),
+                    REQUEST_CODE
+            );
+        }
     }
 
     private List<String> getDeniedPermissions(String... permissions) {
@@ -33,36 +62,15 @@ public abstract class PermissionActivity extends Activity {
         return deniedPermissions;
     }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        if (requestCode == REQUEST_CODE) {
-            List<String> deniedPermissions = new ArrayList<>(grantResults.length);
-            for (int i = 0; i < grantResults.length; i++) {
-                int result = grantResults[i];
-                boolean isDenied = (result == PackageManager.PERMISSION_DENIED);
-                if (isDenied) {
-                    deniedPermissions.add(permissions[i]);
-                }
+    private List<String> getDeniedPermissions(String[] permissions, int[] grantResults) {
+        List<String> deniedPermissions = new ArrayList<>(grantResults.length);
+        for (int i = 0; i < grantResults.length; i++) {
+            int result = grantResults[i];
+            boolean isDenied = (result == PackageManager.PERMISSION_DENIED);
+            if (isDenied) {
+                deniedPermissions.add(permissions[i]);
             }
-            resolveDeniedPermissions(deniedPermissions);
         }
-    }
-
-    private void resolveDeniedPermissions(List<String> deniedPermissions) {
-        boolean isPermissionSafe = (deniedPermissions.isEmpty());
-        if (isPermissionSafe) {
-            callback.onPermissionGranted();
-        } else {
-            requestPermissions(deniedPermissions);
-        }
-    }
-
-    private void requestPermissions(List<String> permissions) {
-        if (!permissions.isEmpty()) {
-            requestPermissions(
-                    permissions.toArray(new String[permissions.size()]),
-                    REQUEST_CODE
-            );
-        }
+        return deniedPermissions;
     }
 }

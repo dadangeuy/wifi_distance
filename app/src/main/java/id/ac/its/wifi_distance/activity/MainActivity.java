@@ -8,6 +8,7 @@ import android.content.IntentFilter;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
@@ -42,6 +43,11 @@ public class MainActivity extends PermissionActivity implements OnPermissionGran
     private WifiDataAdapter wifiDataAdapter;
 
     public MainActivity() {
+        super(
+                permission.ACCESS_WIFI_STATE,
+                permission.CHANGE_WIFI_STATE,
+                permission.ACCESS_COARSE_LOCATION
+        );
         wifiScanReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -51,21 +57,19 @@ public class MainActivity extends PermissionActivity implements OnPermissionGran
     }
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
         initUiComponent();
         initServiceComponent();
+    }
 
-        requestPermissionsAsync(
-                permission.ACCESS_WIFI_STATE,
-                permission.CHANGE_WIFI_STATE,
-                permission.ACCESS_COARSE_LOCATION
-        );
+    @Override
+    public void onPermissionGranted() {
+        initPeriodicWifiScan();
     }
 
     private void initUiComponent() {
-        setContentView(R.layout.activity_main);
-
         Button resetButton = findViewById(R.id.ResetButton);
         resetButton.setOnClickListener(this::onClickReset);
 
@@ -79,10 +83,6 @@ public class MainActivity extends PermissionActivity implements OnPermissionGran
         wifiManager = getSystemService(WifiManager.class);
     }
 
-    @Override
-    public void onPermissionGranted() {
-        initPeriodicWifiScan();
-    }
 
     private void initPeriodicWifiScan() {
         executor.scheduleAtFixedRate(
