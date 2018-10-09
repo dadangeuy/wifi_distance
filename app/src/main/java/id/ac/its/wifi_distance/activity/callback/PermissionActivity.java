@@ -2,15 +2,21 @@ package id.ac.its.wifi_distance.activity.callback;
 
 import android.app.Activity;
 import android.content.pm.PackageManager;
+import android.support.annotation.NonNull;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-public abstract class OnPermissionsGrantedCallback extends Activity {
-    private int REQUEST_CODE = new Random().nextInt();
+public abstract class PermissionActivity extends Activity {
+    private final OnPermissionGrantedCallback callback;
+    private final int REQUEST_CODE = new Random().nextInt();
 
-    protected void onRequestPermissions(String... permissions) {
+    public PermissionActivity() {
+        callback = OnPermissionGrantedCallback.class.cast(this);
+    }
+
+    protected void requestPermissionsAsync(String... permissions) {
         List<String> deniedPermissions = getDeniedPermissions(permissions);
         resolveDeniedPermissions(deniedPermissions);
     }
@@ -28,7 +34,7 @@ public abstract class OnPermissionsGrantedCallback extends Activity {
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if (requestCode == REQUEST_CODE) {
             List<String> deniedPermissions = new ArrayList<>(grantResults.length);
             for (int i = 0; i < grantResults.length; i++) {
@@ -45,7 +51,7 @@ public abstract class OnPermissionsGrantedCallback extends Activity {
     private void resolveDeniedPermissions(List<String> deniedPermissions) {
         boolean isPermissionSafe = (deniedPermissions.isEmpty());
         if (isPermissionSafe) {
-            onPermissionsGranted();
+            callback.onPermissionGranted();
         } else {
             requestPermissions(deniedPermissions);
         }
@@ -59,6 +65,4 @@ public abstract class OnPermissionsGrantedCallback extends Activity {
             );
         }
     }
-
-    public abstract void onPermissionsGranted();
 }

@@ -22,11 +22,12 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import id.ac.its.wifi_distance.R;
-import id.ac.its.wifi_distance.activity.callback.OnPermissionsGrantedCallback;
+import id.ac.its.wifi_distance.activity.callback.OnPermissionGrantedCallback;
+import id.ac.its.wifi_distance.activity.callback.PermissionActivity;
 import id.ac.its.wifi_distance.model.WifiData;
 import id.ac.its.wifi_distance.model.WifiDataAdapter;
 
-public class MainActivity extends OnPermissionsGrantedCallback {
+public class MainActivity extends PermissionActivity implements OnPermissionGrantedCallback {
     // Non-Android Component
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     private final BroadcastReceiver wifiScanReceiver;
@@ -55,7 +56,7 @@ public class MainActivity extends OnPermissionsGrantedCallback {
         initUiComponent();
         initServiceComponent();
 
-        onRequestPermissions(
+        requestPermissionsAsync(
                 permission.ACCESS_WIFI_STATE,
                 permission.CHANGE_WIFI_STATE,
                 permission.ACCESS_COARSE_LOCATION
@@ -79,7 +80,7 @@ public class MainActivity extends OnPermissionsGrantedCallback {
     }
 
     @Override
-    public void onPermissionsGranted() {
+    public void onPermissionGranted() {
         initPeriodicWifiScan();
     }
 
