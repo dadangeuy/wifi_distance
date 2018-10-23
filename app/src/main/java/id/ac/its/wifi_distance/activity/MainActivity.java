@@ -64,11 +64,6 @@ public class MainActivity extends PermissionActivity implements OnPermissionGran
         initServiceComponent();
     }
 
-    @Override
-    public void onPermissionGranted() {
-        initPeriodicWifiScan();
-    }
-
     private void initUiComponent() {
         Button resetButton = findViewById(R.id.ResetButton);
         resetButton.setOnClickListener(this::onClickReset);
@@ -79,10 +74,20 @@ public class MainActivity extends PermissionActivity implements OnPermissionGran
         wifiRecyclerView.setAdapter(wifiDataAdapter);
     }
 
+    private void onClickReset(View view) {
+        wifiDataMap.clear();
+        wifiDataList.clear();
+        wifiDataAdapter.notifyDataSetChanged();
+    }
+
     private void initServiceComponent() {
         wifiManager = getSystemService(WifiManager.class);
     }
 
+    @Override
+    public void onPermissionGranted() {
+        initPeriodicWifiScan();
+    }
 
     private void initPeriodicWifiScan() {
         executor.scheduleAtFixedRate(
@@ -125,12 +130,6 @@ public class MainActivity extends PermissionActivity implements OnPermissionGran
     private synchronized void showWifiDataSummary() {
         wifiDataList.clear();
         wifiDataList.addAll(wifiDataMap.values());
-        wifiDataAdapter.notifyDataSetChanged();
-    }
-
-    private void onClickReset(View view) {
-        wifiDataMap.clear();
-        wifiDataList.clear();
         wifiDataAdapter.notifyDataSetChanged();
     }
 }
