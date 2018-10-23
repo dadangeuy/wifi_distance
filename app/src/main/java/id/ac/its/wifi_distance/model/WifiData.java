@@ -11,24 +11,24 @@ public class WifiData {
     private static int MAX_DBM_LIST = 10;
     private static Comparator<Integer> ABS_COMPARATOR = Comparator.comparingInt(Math::abs);
 
-    private String BSSID;
-    private String SSID;
-    private int frequency;
-    private LinkedList<Integer> dbmList = new LinkedList<>();
+    private final String BSSID;
+    private final String SSID;
+    private final int frequency;
+    private final LinkedList<Integer> dbmList = new LinkedList<>();
 
-    private WifiData() {
+    private WifiData(String BSSID, String SSID, int frequency) {
+        this.BSSID = BSSID;
+        this.SSID = SSID;
+        this.frequency = frequency;
     }
 
     public static WifiData from(ScanResult result) {
-        WifiData data = new WifiData();
-        data.BSSID = result.BSSID;
-        data.SSID = result.SSID;
-        data.frequency = result.frequency;
+        WifiData data = new WifiData(result.BSSID, result.SSID, result.frequency);
         data.dbmList.add(result.level);
         return data;
     }
 
-    public synchronized void addDbm(ScanResult result) {
+    public void addDbm(ScanResult result) {
         dbmList.addFirst(result.level);
         if (dbmList.size() > MAX_DBM_LIST) {
             dbmList.removeLast();
@@ -44,9 +44,15 @@ public class WifiData {
     }
 
     private Double getDistance() {
-        double dBm = getStrongestDbm();
+        double dBm = getAverageDbm();
         double exp = (27.55 - (20.0 * Math.log10(frequency)) + Math.abs(dBm)) / 20.0;
         return Math.pow(10.0, exp);
+    }
+
+    private double getAverageDbm() {
+        return dbmList.stream().mapToDouble(Integer::doubleValue)
+                .average()
+                .orElse(Double.NaN);
     }
 
     private int getStrongestDbm() {
